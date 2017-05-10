@@ -12,10 +12,10 @@ defaultPeptideTrainData <- function(){
 #'
 #' This function acces to a SVM model trained
 #' @param model The model to be loaded
-#' 
+#'
 #'
 loadSVMModel <- function(model = "default"){
-    
+
   if(model=="default"){
     filePath <- system.file("extdata", "svmModelDefault.rda", package = "pIR")
     svm <- load(file = filePath, .GlobalEnv)
@@ -40,48 +40,48 @@ loadSVMModel <- function(model = "default"){
 
 
 #' transformData
-#' 
+#'
 #' This function transform a new data (dataframe) using center and scale transformation.
 #' This transformation is necesary previous to use svm method.
-#' 
+#'
 #' @param instances The data to be transformed
 #' @param defaultTrainingSet A flag to get the training set used in the transformation (if TRUE, default training set will be used)
 #' @param trainingSet The training set used to apply transformation.
-#' 
+#'
 #' @details If trainingSet flag is not "default", "heller" or "branca", the current data will be used to apply the transformation requeried
 #' @details before use a SVM model, the set supply must contains the following variables: calibrated, expasy and aaindex.
 #'
 transformData <- function(instances = instance, trainingSet = "default"){
-    
+
   if(trainingSet=="default"){
     #load default dataset
     filePath <- system.file("extdata", "svmDataSetDefault.rda", package = "pIR")
     load(filePath)
-    
+
   }else if(trainingSet=="heller"){
     #load heller dataset
     filePath <- system.file("extdata", "svmHellerDataSet.rda", package = "pIR")
     load(filePath)
-    
+
   }else if(trainingSet=="branca"){
     #load branca dataset
     filePath <- system.file("extdata", "svmBrancaDataSet.rda", package = "pIR")
     load(filePath)
-    
+
   }else if(trainingSet=="current"){
     #otherwise, use the provided dataset to apply transformation...
     data <- instances
   }
-  
+
    #retrive attributes from dataset. It must be equal to new instance attributes.
    peptides_propeties <- subset(data, select=c("calibrated", "expasy", "aaindex"))
-  
+
    #create preProcess object
    preObject <- preProcess(peptides_propeties, method = c("center", "scale"))
-  
+
    #process new instances using (trainingSet) option
    preData <- predict(preObject, newdata = instances)
-    
+
    return(preData)
 }
 
@@ -89,71 +89,71 @@ transformData <- function(instances = instance, trainingSet = "default"){
 
 
 #' pISVMsequences
-#' 
+#'
 #' This function predict the pI from multiple sequences contained into dataframe.
-#' 
+#'
 #' @param df The dataset with sequences. It must contains the variables: "calibrated", "expasy" and "aaindex".
 #' @param model The SVM-based model to be used in the prediction (use "default", "heller" or "branca" options)
 #' @param newModel A flag enabling the posibility to choose a new model to be used.
-#' 
+#'
 #' @details By default, this method use a svm-model from the setting of the "model" parameter and keeping
 #' @details the parameter "newModel" = FALSE. However, it is possible to build a new svm model from the current dataset
 #' @details setting "newModel"=TRUE. To do it, The input dataframe must contains the variables requeried to train
 #' @details a svm model: "calibrated", "expasy" and "aaindex".
 #'
 pISVMsequences <- function(df = dataframe, model = "default", newModel = FALSE){
-  
+
    if(!newModel){
-    
+
     #loading default svm model
     svm <- loadSVMModel(model)
-    
+
     #processing data...requeried previous to use svm model
     processedData <- transformData(instances = df, trainingSet = model)
-    
+
     #predicting pI with svm model
      pI <- predict(svmModel, newdata = processedData)
-    
+
     #build dataframe with new pI values predicted
     df$pIsvm <- as.vector(pI, mode = "any")
-    
+
   }else{
-    
+
     #build new svm model from current data
     svmModel <- svmPIData(data = df)
-    
+
     #read varibles from dataframe
     sequences_propeties <- subset(df, select=c("calibrated", "expasy", "aaindex"))
-    
+
     #processing data...requeried previous to use svm model
     processedData <- transformData(instances = sequences_propeties, trainingSet = "current")
-    
+
     #predicting pI with svm model
     pI <- predict(svmModel, newdata = processedData)
-    
+
     #build dataframe with new pI values predicted
     df$pIsvm <- as.vector(pI, mode = "any")
-    
+
   }
-  
+
   return(df)
 }
 
 
 #' pISVMpeptide
-#' 
+#'
 #' This function predict the pI of a single sequence.
-#' 
+#'
 #' @param sequence The sequence to be used
 #' @param model The SVM-based model to be used in the prediction (use "default", "heller" or "branca" options)
 #'
-#'  
+#'
 pISVMpeptide <- function(sequence, model = "default"){
     #computing the features requeried to vectorize the peptide/protein
     aaindex      <- aaIndex(sequence = sequence)
     calibrated   <- pIBjell(sequence = sequence, pkSetMethod = "calibrated")
     expasy       <- pIBjell(sequence = sequence, pkSetMethod = "expasy")
-    
+
     #loading svm-model
     svm  <- loadSVMModel(model = model)
 
@@ -218,9 +218,9 @@ svmBuildProteinData <- function(loadData = FALSE, method = "svmRadial", numberIt
 svmPIBuildData <- function(originalData){
 
     data <- originalData
-    
+
     colnames(data) <-c("sequence", "pIExp")
-    
+
     #Add all the bjell methods and pk Sets
     data <- mdply(data, function(sequence, pIExp) { pIBjell(sequence = sequence, pkSetMethod = "calibrated") })
 
@@ -252,7 +252,7 @@ svmPIBuildData <- function(originalData){
 #'
 #' This function takes a data frame an return a model with the best variables.
 #' The training process could be time-consuming.
-#' 
+#'
 #' @param data The df
 #'
 
@@ -332,7 +332,7 @@ aaIndex <- function(sequence){
 
     sequence <- reformat(seq = sequence)
     sequence <- toupper(sequence)
-    
+
     #aaV <- strsplit(sequence, "", fixed = TRUE)
     #aaNTerm <- aaV[[1]][1]
     #aaCTerm <- aaV[[1]][nchar(sequence)]
@@ -341,23 +341,27 @@ aaIndex <- function(sequence){
                                  value  <- c( 6.00, 5.98, 10.76, 9.74, 5.41, 5.74, 2.77, 5.48, 5.05, 6.30, 5.65, 5.68,3.22, 5.66, 5.97, 5.89, 7.59, 5.66, 6.02, 5.96))
     colnames(aaZimmermanDes) <- c("key", "value")
     #count <- 2;
-    
+
     lev <- c("A",  "L",  "R", "K", "N", "M", "D", "F", "C","P", "Q", "S", "E", "T", "G", "W", "H", "Y", "I", "V")
-    
+
     aaTable <- table(factor(prot <- strsplit(sequence, "")[[1]], levels = lev))
-    
+
     pKNValues <- loadNTermPK(pkSet = "calibrated")
     pKCValues <- loadCTermPK(pkSet = "calibrated")
-    
+
     pKNTerm <- retrievePKValue(prot[1], pKNValues)
     pKCTerm <- retrievePKValue(prot[length(prot)], pKCValues)
-    
+
+    oldw <- getOption("warn")
+    options(warn = -1)
+
     temp <- aaTable*aaZimmermanDes
-    
+
+    options(warn = oldw)
     zimm <- pKNTerm + pKCTerm + sum(temp$value)
 
     zimm = zimm/(length(prot)+2)
-    
+
     return (as.numeric(zimm))
 }
 
